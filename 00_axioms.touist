@@ -1,0 +1,168 @@
+;; Set now - the global var 
+$now = 4
+;; Set lenght of the plan
+$length = ($now + 4)
+
+$I 			= [pos_1_p_16_16, pos_2_p_16_17, pos_3_p_17_16, pos_4_p_17_17]
+
+$POSINI(1) = [p_16_16]
+$POSINI(2) = [p_16_17]
+$POSINI(3) = [p_17_16]
+$POSINI(4) = [p_17_17]
+$POSINI(5) = [p_16_16]
+$POSINI(6) = [p_16_17]
+$POSINI(7) = [p_17_16]
+$POSINI(8) = [p_17_17]
+$POSINI(9) = [p_16_16]
+$POSINI(10) = [p_16_17]
+$POSINI(11) = [p_17_16]
+$POSINI(12) = [p_17_17]
+$POSINI(13) = [p_16_16]
+$POSINI(14) = [p_16_17]
+$POSINI(15) = [p_17_16]
+$POSINI(16) = [p_17_17]
+
+$HINTS = [1,3,4,5,6,7]
+
+$HINT_COLOR(1) 		= [R]
+$HINT_COLOR(2) 		= [R,B]
+$HINT_COLOR(3) 		= [R,Y]
+$HINT_COLOR(4) 		= [B,G,Y]
+
+
+
+
+$avHINTS = [1,3,5,6,7]
+$acHINTS = [4]
+
+
+
+$G 			= [pos_1_p_16_16, pos_2_p_16_17, pos_3_p_17_16, pos_4_p_15_16]
+
+$CARDS  		= [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]
+
+$AVHINTS = [2,3]
+
+;; pass dinamically
+$ACTMOVCARD = [4]
+$ACTMOVPOS  = [p_15_16]
+$ACTOBSCARD = [1,4]
+$ACTOBSCOL  = [B,R]
+$ACTMARKCARD = [4]
+$ACTMARKHINT = [2]
+;; end pass dinamically
+
+$COLORS 		= [B,R,Y,G]
+$OPOS($now)   	= [p_16_16, p_16_17, p_17_16, p_17_17, p_16_16, p_16_17, p_17_16, p_17_17, p_16_16, p_16_17, p_17_16, p_17_17, p_16_16, p_16_17, p_17_16, p_17_17] ;; Occupied Positions t = 1
+$GRID	   	= [p_16_16, p_16_17, p_17_16, p_17_17, p_16_16, p_16_17, p_17_16, p_17_17, p_16_16, p_16_17, p_17_16, p_17_17, p_16_16, p_16_17, p_17_16, p_17_17, p_15_16]
+$PERIM	   	= [p_18_15, p_17_15, p_16_15, p_15_15, p_15_16, p_15_17, p_15_18, p_16_18, p_17_18, p_18_18, p_18_17, p_18_16]
+
+;; (SAT-EFA1) Etat initial et but
+bigand $i in $I: $i($now) end 
+
+
+IVB_COLOR
+bigand $x,$c in $CARDS,$COLORS :
+  not tm_col($x,$c,t,$now,x)
+end
+
+
+IVB_MARK
+bigand $x,$h in $CARDS,$AVHINTS :
+  not mark($x,$h,t,$now,x)
+end
+
+
+ICP1
+bigand $t in [$now..$length]:
+  bigand $x in $CARDS :
+  	bigor $p in $GRID :
+    		pos($x,$p,t,$t,x)
+    	end
+  end
+end
+FIN_ICP1
+
+ICP2
+bigand $t in [$now..$length]:
+  bigand $x,$p1,$p2 in $CARDS,$GRID,$GRID when $p1 != $p2:
+    not (pos($x,$p1,t,$t,x) and pos($x,$p2,t,$t,x))
+  end
+end
+FIN_ICP2
+
+;;ICP3
+;;bigand $t in [$now..$length]:
+;;  bigand $x1,$x2,$p in $CARDS,$CARDS,$GRID when $x1 != $x2:
+;;    not (pos($x1,$p,t,$t,x) and pos($x2,$p,t,$t,x))
+;;  end
+;;end
+;;FIN_ICP3
+
+ICC4
+bigand $t in [$now..$length]:
+  bigand $x in $CARDS :
+  	bigor $c in $COLORS :
+    		col($x,$c,t,$t,x)
+    	end 
+  end
+end
+FIN_ICC4
+
+ICC5
+bigand $t in [$now..$length]:
+  bigand $x,$c1,$c2 in $CARDS,$COLORS,$COLORS when $c1 != $c2:
+    not (col($x,$c1,t,$t,x) and col($x,$c2,t,$t,x))
+  end
+end
+FIN_ICC5
+
+
+SSA12
+bigand $t in [$now+1..$length]:
+  bigand $xa, $movact in $ACTMOVCARD, $ACTMOVPOS :
+    (pos($xa,$movact,t,$t,x) and not pos($xa,$movact,t,$t-1,x))
+    => ((bigand $x, $p in $CARDS, $POSINI($x) when $x != $xa: pos($x,$p,t,$t,x) <=> pos($x,$p,t,$t-1,x) end) and
+    	   (bigand $x, $c in $CARDS, $COLORS : (col($x,$c,t,$t,x) <=> col($x,$c,t,$t-1,x)) and (not tm_col($x,$c,t,$t,x) <=> not  tm_col($x,$c,t,$t-1,x)) end) and
+    	   (bigand $x, $h in $CARDS, $AVHINTS : mark($x,$h,t,$t,x) <=> mark($x,$h,t,$t-1,x) end)    	   
+    	   )	
+  end
+end
+FIN_SSA12
+
+
+SSA13
+bigand $t in [$now+1..$length]:
+  bigand $xa, $coloract in $ACTOBSCARD, $ACTOBSCOL :
+    (col($xa,$coloract,t,$t,x) and not tm_col($xa,$coloract,t,$t-1,x))
+    => ((bigand $x, $p in $CARDS, $POSINI($x) : pos($x,$p,t,$t,x) <=> pos($x,$p,t,$t-1,x) end) and
+    	   (bigand $x, $c in $CARDS, $COLORS when $x != $xa: (col($x,$c,t,$t,x) <=> col($x,$c,t,$t-1,x)) and (not tm_col($x,$c,t,$t,x) <=> not tm_col($x,$c,t,$t-1,x)) end) and
+	   (bigand $x, $h in $CARDS, $AVHINTS : mark($x,$h,t,$t,x) <=> mark($x,$h,t,$t-1,x) end)    	   
+    	   )	
+  end
+end
+FIN_SSA13
+
+
+SSA15
+bigand $t in [$now+1..$length]:
+  bigand $xa, $hintact in $ACTMARKCARD, $ACTMARKHINT :
+    (mark($xa,$hintact,t,$t,x) and not mark($xa,$hintact,t,$t-1,x))
+    => ((bigand $x, $p in $CARDS, $GRID : pos($x,$p,t,$t,x) <=> pos($x,$p,t,$t-1,x) end) and
+    	   (bigand $x, $c in $CARDS, $COLORS : (col($x,$c,t,$t,x) <=> col($x,$c,t,$t-1,x)) and (not tm_col($x,$c,t,$t,x) <=> not tm_col($x,$c,t,$t-1,x)) end) and
+    	   (bigand $x, $h in $CARDS, $AVHINTS when $x != $xa: mark($x,$h,t,$t,x) <=> mark($x,$h,t,$t-1,x) end)
+    	   )	
+  end
+end
+FIN_SSA15
+
+
+
+
+GOAL
+bigand $g in $G: $g($length) end
+FIN GOAL
+
+
+
+
